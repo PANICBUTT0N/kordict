@@ -1,0 +1,122 @@
+from aqt import mw
+from aqt.qt import *
+from aqt.utils import showInfo
+import requests
+import xml.etree.ElementTree as eT
+
+pos = {
+    '명사': 'noun',
+    '대명사': 'pronoun',
+    '수사': 'numeral',
+    '조사': 'particle',
+    '동사': 'verb',
+    '형용사': 'adjective',
+    '관형사': 'determiner',
+    '부사': 'adverb',
+    '감탄사': 'interjection',
+    '접사': 'affix',
+    '의존 명사': 'dependent noun',
+    '보조 동사': 'auxiliary verb',
+    '보조 형용사': 'auxiliary adjective',
+    '어미': 'suffix',
+    '품사 없음': ''
+}
+
+URL = 'https://krdict.korean.go.kr/api/search'
+CONFIG = mw.addonManager.getConfig(__name__)
+key_prompt_type = True
+
+
+class InputDialog(QDialog):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("User Input")
+        self.setFixedSize(300, 300)
+
+        layout = QVBoxLayout()
+        if key_prompt_type:
+            self.label = QLabel('No API key. Please enter one:'
+                                '<a href="https://krdict.korean.go.kr/openApi/openApiRegister">Get API Key</a>')
+        else:
+            self.label = QLabel('Invalid API key. Please enter again:'
+                                '<a href="https://krdict.korean.go.kr/openApi/openApiRegister">Get API Key</a>')
+
+        self.label.setOpenExternalLinks(True)
+        layout.addWidget(self.label)
+
+        self.input_field = QLineEdit(self)
+        layout.addWidget(self.input_field)
+
+        self.submit_button = QPushButton('Ok', self)
+        self.submit_button.clicked.connect(self.save_input)
+        layout.addWidget(self.submit_button)
+
+        self.setLayout(layout)
+
+    def save_input(self):
+        user_input = self.input_field.text()
+        self.save_to_config(user_input)
+        self.close()
+
+    def save_to_config(self, user_input):
+        CONFIG['api_key'] = user_input
+        mw.addonManager.writeConfig(__name__, CONFIG)
+
+
+def api_key_prompt():
+    global key_prompt_type
+    InputDialog().exec()
+
+
+def check_for_api_key(func):
+    def wrapper(self, *args, **kwargs):
+        global key_prompt_type
+        while not CONFIG.get('api_key'):
+            key_prompt_type = True
+            api_key_prompt()
+        return func(self, *args, **kwargs)
+
+    return wrapper
+
+
+def get_text(result, tag):
+    element = result.find(tag)
+    return element.text if element is not None else ''
+
+
+@check_for_api_key
+def dictionary(word):
+    global key_prompt_type
+    parameters = {
+        'key': CONFIG['api_key'],
+        'q': word,
+        'advanced': 'y',
+    }
+
+    try:
+        response = requests.get(URL, params=parameters)
+        response.raise_for_status()
+    except requests.RequestException as e:
+        showInfo(f'An error occurred while making the request: {e}')
+        return '', None
+    else:
+        root = eT.fromstring(response.content)
+        error = root.find('error_code')
+        while error is not None:
+            key_prompt_type = False
+            api_key_prompt()
+
+        results = root.findall('item')
+        if not results:
+            return '', None
+
+        entries = []
+        for result in results:
+            entries.append({
+                'target_code': get_text(result, 'target_code'),
+                'origin': get_text(result, 'origin'),
+                'pos': pos.get(get_text(result, 'pos'))
+            })
+
+        entries = sorted(entries, key=lambda x: x['target_code'])
+        return entries[0]['origin'], entries[0]['pos']
