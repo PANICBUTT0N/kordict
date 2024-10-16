@@ -1,6 +1,7 @@
 {
     "api_key": "",
     "input_field": "Korean",
-    "hanja_field": "Frequency",
-    "pos_field": "POS"
+    "hanja_field": "Hanja",
+    "pos_field": "POS",
+    "replacement_char": 1
 }

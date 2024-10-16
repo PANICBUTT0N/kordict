@@ -1,8 +1,24 @@
 from aqt import mw
 from aqt.qt import *
 from aqt.utils import showInfo
+import re
 import requests
 import xml.etree.ElementTree as eT
+
+URL = 'https://krdict.korean.go.kr/api/search'
+CONFIG = mw.addonManager.getConfig(__name__)
+key_prompt_type = True
+
+replacement_patterns = {
+    1: [r'[가-힣]|[▼←]|[a-zA-z]+', '-'],
+    2: [r'[가-힣]|[▼←]|[a-zA-z]', '-'],
+    3: [r'[가-힣]|[▼←]|[a-zA-z]', ''],
+    4: [r'(?!) ', '']
+}
+if type(CONFIG['replacement_char']) == int and 0 < CONFIG['replacement_char'] <=4:
+    replacement_pattern_and_char = replacement_patterns.get(CONFIG['replacement_char'])
+else:
+    replacement_pattern_and_char = [r'(?!) ', '']
 
 pos = {
     '명사': 'noun',
@@ -21,10 +37,6 @@ pos = {
     '어미': 'suffix',
     '품사 없음': ''
 }
-
-URL = 'https://krdict.korean.go.kr/api/search'
-CONFIG = mw.addonManager.getConfig(__name__)
-key_prompt_type = True
 
 
 class InputDialog(QDialog):
@@ -79,9 +91,14 @@ def check_for_api_key(func):
     return wrapper
 
 
-def get_text(result, tag):
-    element = result.find(tag)
-    return element.text if element is not None else ''
+def get_text(result, tag, is_hanja=False):
+    element = result.find(tag).text
+    if element is not None:
+        if is_hanja:
+            element = re.sub(replacement_pattern_and_char[0], replacement_pattern_and_char[1], element)
+        return element
+    else:
+        return ''
 
 
 @check_for_api_key
@@ -114,9 +131,9 @@ def dictionary(word):
         for result in results:
             entries.append({
                 'target_code': get_text(result, 'target_code'),
-                'origin': get_text(result, 'origin'),
+                'hanja': get_text(result, 'origin', True),
                 'pos': pos.get(get_text(result, 'pos'))
             })
 
         entries = sorted(entries, key=lambda x: x['target_code'])
-        return entries[0]['origin'], entries[0]['pos']
+        return entries[0]['hanja'], entries[0]['pos']
