@@ -11,12 +11,15 @@ from aqt.utils import (
 from .dict_open_api import dictionary
 
 CONFIG = mw.addonManager.getConfig(__name__)
+INPUT_FIELD = CONFIG['input_field']
+HANJA_FIELD = CONFIG['hanja_field']
+POS_FIELD = CONFIG['pos_field']
+OVERWRITE_FIELD = CONFIG['overwrite_field']
 
 
 @skip_if_selection_is_empty
 @ensure_editor_saved
 def add_hanja_and_pos(browser: Browser) -> None:
-    
     nids = browser.table.get_selected_note_ids()
     total_notes = len(nids)
 
@@ -29,16 +32,27 @@ def add_hanja_and_pos(browser: Browser) -> None:
         if progress_dialog.wasCanceled():
             break
 
-        input_field = CONFIG['input_field']
-        hanja_field = CONFIG['hanja_field']
-        pos_field = CONFIG['pos_field']
         note = mw.col.get_note(nid)
-        hanja, pos = dictionary(note[input_field])
-        if hanja:
-            note[hanja_field] = hanja
-        if pos:
-            note[pos_field] = pos
-        mw.col.update_note(note)
+        hanja, pos = dictionary(note[INPUT_FIELD])
+        if OVERWRITE_FIELD == 'y':
+            if hanja:
+                note[HANJA_FIELD] = hanja
+            if pos:
+                note[POS_FIELD] = pos
+                mw.col.update_note(note)
+
+        elif OVERWRITE_FIELD == 'n':
+            if not note[HANJA_FIELD].strip():
+                if hanja:
+                    note[HANJA_FIELD] = hanja
+            if not note[POS_FIELD].strip():
+                if pos:
+                    note[POS_FIELD] = pos
+            mw.col.update_note(note)
+
+        else:
+            showInfo('Invalid overwrite option. Please check config.')
+            break
 
         progress_dialog.setValue(index + 1)
 
@@ -50,7 +64,6 @@ def add_hanja_and_pos(browser: Browser) -> None:
 @skip_if_selection_is_empty
 @ensure_editor_saved
 def add_hanja(browser: Browser) -> None:
-    
     nids = browser.table.get_selected_note_ids()
     total_notes = len(nids)
 
@@ -63,13 +76,23 @@ def add_hanja(browser: Browser) -> None:
         if progress_dialog.wasCanceled():
             break
 
-        input_field = CONFIG['input_field']
-        hanja_field = CONFIG['hanja_field']
         note = mw.col.get_note(nid)
-        hanja, _ = dictionary(note[input_field])
-        if hanja:
-            note[hanja_field] = hanja
-            mw.col.update_note(note)
+        if OVERWRITE_FIELD == 'y':
+            hanja, _ = dictionary(note[INPUT_FIELD])
+            if hanja:
+                note[HANJA_FIELD] = hanja
+                mw.col.update_note(note)
+
+        elif OVERWRITE_FIELD == 'n':
+            if not note[HANJA_FIELD].strip():
+                hanja, _ = dictionary(note[INPUT_FIELD])
+                if hanja:
+                    note[HANJA_FIELD] = hanja
+                    mw.col.update_note(note)
+
+        else:
+            showInfo('Invalid overwrite option. Please check config.')
+            break
 
         progress_dialog.setValue(index + 1)
 
@@ -81,7 +104,6 @@ def add_hanja(browser: Browser) -> None:
 @skip_if_selection_is_empty
 @ensure_editor_saved
 def add_pos(browser: Browser) -> None:
-    
     nids = browser.table.get_selected_note_ids()
     total_notes = len(nids)
 
@@ -94,13 +116,23 @@ def add_pos(browser: Browser) -> None:
         if progress_dialog.wasCanceled():
             break
 
-        input_field = CONFIG['input_field']
-        pos_field = CONFIG['pos_field']
         note = mw.col.get_note(nid)
-        _, pos = dictionary(note[input_field])
-        if pos:
-            note[pos_field] = pos
-            mw.col.update_note(note)
+        if OVERWRITE_FIELD == 'y':
+            pos, _ = dictionary(note[INPUT_FIELD])
+            if pos:
+                note[POS_FIELD] = pos
+                mw.col.update_note(note)
+
+        elif OVERWRITE_FIELD == 'n':
+            if not note[POS_FIELD].strip():
+                pos, _ = dictionary(note[INPUT_FIELD])
+                if pos:
+                    note[POS_FIELD] = hanja
+                    mw.col.update_note(note)
+
+        else:
+            showInfo('Invalid overwrite option. Please check config.')
+            break
 
         progress_dialog.setValue(index + 1)
 

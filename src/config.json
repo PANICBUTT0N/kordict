@@ -3,5 +3,6 @@
     "input_field": "Korean",
     "hanja_field": "Hanja",
     "pos_field": "POS",
+    "overwrite_field": "n",
     "replacement_char": 1
 }
