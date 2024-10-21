@@ -10,12 +10,12 @@ CONFIG = mw.addonManager.getConfig(__name__)
 key_prompt_type = True
 
 replacement_patterns = {
-    1: [r'[가-힣]|[▼←]|[a-zA-z]+', '-'],
-    2: [r'[가-힣]|[▼←]|[a-zA-z]', '-'],
-    3: [r'[가-힣]|[▼←]|[a-zA-z]', ''],
+    1: [r'([가-힣]+|[▼←]+|[a-zA-Z]+)', '-'], # Replace each group of non-Hanja chars with hyphen
+    2: [r'[가-힣]|[▼←]|[a-zA-z]', '-'], # Replace each non-Hanja char with hyphen
+    3: [r'[가-힣]|[▼←]|[a-zA-z]', ''],  # Remove non-Hanja chars
     4: [r'(?!) ', '']
 }
-if type(CONFIG['replacement_char']) == int and 0 < CONFIG['replacement_char'] <=4:
+if type(CONFIG['replacement_char']) == int and CONFIG['replacement_char'] <=4:
     replacement_pattern_and_char = replacement_patterns.get(CONFIG['replacement_char'])
 else:
     replacement_pattern_and_char = [r'(?!) ', '']
@@ -95,7 +95,10 @@ def get_text(result, tag, is_hanja=False):
     element = result.find(tag).text
     if element is not None:
         if is_hanja:
-            element = re.sub(replacement_pattern_and_char[0], replacement_pattern_and_char[1], element)
+            if not bool(re.fullmatch(r'([가-힣]+|[▼←]+|[a-zA-Z]+|\s+)+', element)):
+                element = re.sub(replacement_pattern_and_char[0], replacement_pattern_and_char[1], element)
+            else:
+                element = ''
         return element
     else:
         return ''
