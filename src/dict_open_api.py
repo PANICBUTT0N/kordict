@@ -9,18 +9,18 @@ URL = 'https://krdict.korean.go.kr/api/search'
 CONFIG = mw.addonManager.getConfig(__name__)
 key_prompt_type = True
 
-replacement_patterns = {
+REPLACEMENT_PATTERNS = {
     1: [r'([가-힣]+|[▼←]+|[a-zA-Z]+)', '-'], # Replace each group of non-Hanja chars with hyphen
     2: [r'[가-힣]|[▼←]|[a-zA-z]', '-'], # Replace each non-Hanja char with hyphen
     3: [r'[가-힣]|[▼←]|[a-zA-z]', ''],  # Remove non-Hanja chars
     4: [r'(?!) ', '']
 }
 if type(CONFIG['replacement_char']) == int and CONFIG['replacement_char'] <=4:
-    replacement_pattern_and_char = replacement_patterns.get(CONFIG['replacement_char'])
+    replacement_pattern_and_char = REPLACEMENT_PATTERNS.get(CONFIG['replacement_char'])
 else:
     replacement_pattern_and_char = [r'(?!) ', '']
 
-pos = {
+POS = {
     '명사': 'noun',
     '대명사': 'pronoun',
     '수사': 'numeral',
@@ -135,7 +135,7 @@ def dictionary(word):
             entries.append({
                 'target_code': get_text(result, 'target_code'),
                 'hanja': get_text(result, 'origin', True),
-                'pos': pos.get(get_text(result, 'pos'))
+                'pos': POS.get(get_text(result, 'pos'))
             })
 
         entries = sorted(entries, key=lambda x: x['target_code'])
